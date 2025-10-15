@@ -23,24 +23,24 @@ local Setup = {
 	Size = nil,
 }
 
-local Theme = { --// (Devilish Diablo Theme - Dark reds, blacks, infernal accents)
+local Theme = { --// (Devilish Diablo Theme - Dark reds, blacks, glowing infernal accents)
 	--// Frames:
 	Primary = Color3.fromRGB(20, 0, 0),  -- Deep blood red-black
-	Secondary = Color3.fromRGB(30, 0, 0),  -- Darker crimson
-	Component = Color3.fromRGB(40, 5, 5),  -- Infernal component bg
-	Interactables = Color3.fromRGB(255, 0, 0),  -- Bright red for interacts (toggles, sliders)
+	Secondary = Color3.fromRGB(30, 5, 5),  -- Darker crimson
+	Component = Color3.fromRGB(40, 0, 0),  -- Infernal component base
+	Interactables = Color3.fromRGB(60, 0, 0),  -- Hover/active red
 
 	--// Text:
-	Tab = Color3.fromRGB(255, 100, 100),  -- Hellish red tabs
-	Title = Color3.fromRGB(255, 150, 150),  -- Fiery titles
-	Description = Color3.fromRGB(200, 100, 100),  -- Blood description
+	Tab = Color3.fromRGB(255, 100, 100),  -- Fiery red tabs
+	Title = Color3.fromRGB(255, 150, 150),  -- Hellish title glow
+	Description = Color3.fromRGB(200, 80, 80),  -- Blood description
 
 	--// Outlines:
-	Shadow = Color3.fromRGB(0, 0, 0),  -- Pure black shadows
-	Outline = Color3.fromRGB(150, 0, 0),  -- Dark red outlines
+	Shadow = Color3.fromRGB(150, 0, 0),  -- Demonic red glow shadow
+	Outline = Color3.fromRGB(100, 0, 0),  -- Sharp infernal borders
 
 	--// Image:
-	Icon = Color3.fromRGB(255, 200, 200),  -- Glowing red icons
+	Icon = Color3.fromRGB(255, 200, 200),  -- Glowing icons
 }
 
 --// Services & Functions
@@ -95,7 +95,8 @@ local Color = function(Color, Factor, Mode)
 	if Mode == "Light" then
 		return Color3.fromRGB((Color.R * 255) - Factor, (Color.G * 255) - Factor, (Color.B * 255) - Factor)
 	else
-		return Color3.fromRGB((Color.R * 255) + Factor, (Color.G * 255) + Factor, (Color.B * 255) + Factor)
+		-- Intensify red tones for devilish hover effects
+		return Color3.fromRGB(math.min(255, (Color.R * 255) + Factor * 2), (Color.G * 255) + Factor / 2, (Color.B * 255) + Factor / 2)
 	end
 end
 
@@ -234,23 +235,27 @@ function Animations:Open(Window: CanvasGroup, Transparency: number, UseCurrentSi
 	local Multiplied = Multiply(Original, 1.1)
 	local Shadow = Window:FindFirstChildOfClass("UIStroke")
 
-
-	SetProperty(Shadow, { Transparency = 1 })
+	-- Add infernal pulse glow on open
+	SetProperty(Shadow, { Transparency = 1, Color = Theme.Shadow })
 	SetProperty(Window, {
 		Size = Multiplied,
 		GroupTransparency = 1,
 		Visible = true,
 	})
 
-	Tween(Shadow, .25, { Transparency = 0.5 })
+	Tween(Shadow, .25, { Transparency = 0.3 })  -- Glowing red shadow
 	Tween(Window, .25, {
 		Size = Original,
 		GroupTransparency = Transparency or 0,
 	})
 	
-	-- Add devilish glow pulse on open (assuming UIStroke can be modulated; enhance with Gradient if possible)
-	local GlowTween = Services.Tween:Create(Shadow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.7 })
-	GlowTween:Play()
+	-- Pulsing effect for devilish feel
+	task.spawn(function()
+		while Window.Visible do
+			Tween(Shadow, 0.5, { Transparency = 0.5 })
+			Tween(Shadow, 0.5, { Transparency = 0.3 })
+		end
+	end)
 end
 
 function Animations:Close(Window: CanvasGroup)
@@ -279,7 +284,11 @@ function Animations:Component(Component: any, Custom: boolean)
 		if Custom then
 			Tween(Component, .25, { Transparency = .85 });
 		else
-			Tween(Component, .25, { BackgroundColor3 = Color(Theme.Component, -10, Setup.ThemeMode) });  -- Darken to infernal glow
+			Tween(Component, .25, { BackgroundColor3 = Color(Theme.Component, 20, Setup.ThemeMode) });  -- Brighter red hover
+			-- Add glow
+			if Component:FindFirstChildOfClass("UIStroke") then
+				Tween(Component.UIStroke, 0.25, { Transparency = 0, Color = Theme.Shadow })
+			end
 		end
 	end)
 
@@ -288,6 +297,9 @@ function Animations:Component(Component: any, Custom: boolean)
 			Tween(Component, .25, { Transparency = 1 });
 		else
 			Tween(Component, .25, { BackgroundColor3 = Theme.Component });
+			if Component:FindFirstChildOfClass("UIStroke") then
+				Tween(Component.UIStroke, 0.25, { Transparency = 1 })
+			end
 		end
 	end)
 end
@@ -300,22 +312,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	local Holder = Window:FindFirstChild("Main");
 	local BG = Window:FindFirstChild("BackgroundShadow");
 	local Tab = Sidebar:FindFirstChild("Tab");
-
-	-- Add devilish elements: Assume adding UIGradient for infernal fire effect on main frames
-	local function AddInfernalGradient(Frame)
-		local Gradient = Instance.new("UIGradient")
-		Gradient.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 0, 0)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 0, 0))
-		})
-		Gradient.Rotation = 90
-		Gradient.Transparency = NumberSequence.new(0.2)
-		Gradient.Parent = Frame
-	end
-	
-	AddInfernalGradient(Window)
-	AddInfernalGradient(Holder)
 
 	local Options = {};
 	local Examples = {};
@@ -345,6 +341,15 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		Setup.Keybind = Settings.MinimizeKeybind
 	end
 
+	-- Add glowing stroke to window for devilish border
+	if not Window:FindFirstChildOfClass("UIStroke") then
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Theme.Shadow
+		stroke.Transparency = 0.5
+		stroke.Thickness = 2
+		stroke.Parent = Window
+	end
+
 	--// Animate
 	local Close = function()
 		if Opened then
@@ -369,11 +374,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		if Button:IsA("TextButton") then
 			local Name = Button.Name
 			Animations:Component(Button, true)
-
-			-- Add red glow on buttons
-			local Stroke = Instance.new("UIStroke", Button)
-			Stroke.Color = Theme.Interactables
-			Stroke.Transparency = 0.5
 
 			Connect(Button.MouseButton1Click, function() 
 				if Name == "Close" then
@@ -411,11 +411,8 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 				if SameName and not Opened.Value then
 					Tween(Padding, .25, { PaddingLeft = UDim.new(0, 25) });
-					Tween(Button, .25, { BackgroundTransparency = 0.9, Size = UDim2.new(1, -15, 0, 30) });
+					Tween(Button, .25, { BackgroundTransparency = 0.8, Size = UDim2.new(1, -15, 0, 30), BackgroundColor3 = Theme.Interactables });  -- Red active tab
 					SetProperty(Opened, { Value = true });
-					
-					-- Devilish activation glow
-					Button.BackgroundColor3 = Theme.Interactables
 				elseif not SameName and Opened.Value then
 					Tween(Padding, .25, { PaddingLeft = UDim.new(0, 20) });
 					Tween(Button, .25, { BackgroundTransparency = 1, Size = UDim2.new(1, -44, 0, 30) });
@@ -434,12 +431,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Main.Visible = true
 
 					Tween(Main, .3, { GroupTransparency = 0 });
-				: Tween(Scroll["UIPadding"], .3, { PaddingTop = UDim.new(0, 5) });
+					Tween(Scroll["UIPadding"], .3, { PaddingTop = UDim.new(0, 5) });
 
 				elseif not SameName and Opened.Value then
 					Opened.Value = false
 
-					Tween(Main, .,15, { GroupTransparency = 1 });
+					Tween(Main, .15, { GroupTransparency = 1 });
 					Tween(Scroll["UIPadding"], .15, { PaddingTop = UDim.new(0, 15) });	
 
 					task.delay(.2, function()
@@ -461,16 +458,15 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Name = Settings.Name,
 			LayoutOrder = Settings.Order,
 			Visible = true
-		})
+		});
 		
-		-- Add flame-like underline
-		local Underline = Instance.new("Frame", Section)
-		Underline.Name = "Underline"
-		Underline.BackgroundColor3 = Theme.Interactables
-		Underline.Size = UDim2.new(1, 0, 0, 2)
-		Underline.Position = UDim2.new(0, 0, 1, 0)
-		local UnderGradient = Instance.new("UIGradient", Underline)
-		UnderGradient.Color = ColorSequence.new(Theme.Interactables, Color3.fromRGB(255, 100, 0))
+		-- Add underline glow
+		local underline = Instance.new("Frame")
+		underline.Name = "Underline"
+		underline.BackgroundColor3 = Theme.Shadow
+		underline.Size = UDim2.new(1, 0, 0, 2)
+		underline.Position = UDim2.new(0, 0, 1, 0)
+		underline.Parent = Section
 	end
 
 	function Options:AddTab(Settings: { Title: string, Icon: string, Section: string? })
@@ -524,10 +520,11 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Parent = Screen["Frame"],
 		})
 		
-		-- Devilish notification: Add red border glow
-		local Stroke = Instance.new("UIStroke", Notification)
-		Stroke.Color = Theme.Interactables
-		Stroke.Transparency = 0.5
+		-- Add glow to notification
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Theme.Shadow
+		stroke.Transparency = 0.5
+		stroke.Parent = Notification
 		
 		task.spawn(function() 
 			local Duration = Settings.Duration or 2
@@ -557,11 +554,11 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Visible = true,
 		})
 		
-		-- Add infernal divider
-		Section.BackgroundColor3 = Theme.Component
-		local Divider = Instance.new("Frame", Section)
-		Divider.Size = UDim2.new(1, 0, 0, 1)
-		Divider.BackgroundColor3 = Theme.Outline
+		-- Infernal section underline
+		local line = Section:FindFirstChild("Underline") or Instance.new("Frame")
+		line.BackgroundColor3 = Theme.Shadow
+		line.Size = UDim2.new(1, 0, 0, 1)
+		line.Parent = Section
 	end
 	
 	function Options:AddButton(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
@@ -578,11 +575,11 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Visible = true,
 		})
 		
-		-- Add red hover glow
-		Button.UIStroke.Color = Theme.Interactables
-		Button.UIStroke.Transparency = 0.8
-		Connect(Button.MouseEnter, function() Tween(Button.UIStroke, 0.2, {Transparency = 0.5}) end)
-		Connect(Button.MouseLeave, function() Tween(Button.UIStroke, 0.2, {Transparency = 0.8}) end)
+		-- Add stroke for glow
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Theme.Outline
+		stroke.Transparency = 0.8
+		stroke.Parent = Button
 	end
 
 	function Options:AddInput(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
@@ -607,8 +604,9 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Visible = true,
 		})
 		
-		-- Infernal input border
-		Input.Main.UIStroke.Color = Theme.Outline
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Theme.Outline
+		stroke.Parent = Input.Main
 	end
 
 	function Options:AddToggle(Settings: { Title: string, Description: string, Default: boolean, Tab: Instance, Callback: any }) 
@@ -621,10 +619,10 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		
 		local Set = function(Value)
 			if Value then
-				Tween(Main,   .2, { BackgroundColor3 = Theme.Interactables });  -- Bright red on
-				Tween(Circle, .2, { BackgroundColor3 = Color3.fromRGB(255, 255, 255), Position = UDim2.new(1, -16, 0.5, 0) });
+				Tween(Main,   .2, { BackgroundColor3 = Color3.fromRGB(200, 0, 0) });  -- Hellfire enabled
+				Tween(Circle, .2, { BackgroundColor3 = Color3.fromRGB(255, 100, 100), Position = UDim2.new(1, -16, 0.5, 0) });
 			else
-				Tween(Main,   .2, { BackgroundColor3 = Theme.Interactables });  -- Dark red off, but dimmer
+				Tween(Main,   .2, { BackgroundColor3 = Theme.Interactables });
 				Tween(Circle, .2, { BackgroundColor3 = Theme.Primary, Position = UDim2.new(0, 3, 0.5, 0) });
 			end
 			
@@ -647,10 +645,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Parent = Settings.Tab,
 			Visible = true,
 		})
-		
-		-- Add glow to circle
-		local CircleStroke = Instance.new("UIStroke", Circle)
-		CircleStroke.Color = Color3.fromRGB(255, 0, 0)
 	end
 	
 	function Options:AddKeybind(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
@@ -709,7 +703,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			local Example = Clone(Examples["DropdownExample"]);
 			local Buttons = Example["Top"]["Buttons"];
 
-			Tween(BG, .25, { BackgroundTransparency = 0.6 });
+			Tween(BG, .25, { BackgroundTransparency = 0.4 });  -- Darker overlay
 			SetProperty(Example, { Parent = Window });
 			Animations:Open(Example, 0, true)
 
@@ -808,6 +802,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Value = SetNumber(Number or (Scale * Settings.MaxValue))
 			Amount.Text = Value
 			Fill.Size = UDim2.fromScale((Number and Number / Settings.MaxValue) or Scale, 1)
+			Fill.BackgroundColor3 = Color3.fromRGB(200, 0, 0)  -- Hellfire fill
 			Settings.Callback(Value)
 		end
 
@@ -839,11 +834,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Parent = Settings.Tab,
 			Visible = true,
 		})
-		
-		-- Make slider fill infernal red with gradient
-		Fill.BackgroundColor3 = Theme.Interactables
-		local FillGradient = Instance.new("UIGradient", Fill)
-		FillGradient.Color = ColorSequence.new(Theme.Interactables, Color3.fromRGB(255, 100, 0))
 	end
 
 	function Options:AddParagraph(Settings: { Title: string, Description: string, Tab: Instance }) 
@@ -893,7 +883,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			["Notification"] = function(Label)
 				if Label:IsA("CanvasGroup") then
 					Label.BackgroundColor3 = Theme.Primary
-					Label.UIStroke.Color = Theme.Outline
+					Label.UIStroke.Color = Theme.Shadow  -- Glowing border
 				end
 			end,
 
@@ -958,7 +948,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 			["Underline"] = function(Label)
 				if Label:IsA("Frame") then
-					Label.BackgroundColor3 = Theme.Outline
+					Label.BackgroundColor3 = Theme.Shadow  -- Glowing underline
 				end
 			end,
 		},
@@ -983,7 +973,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end,
 
 			["ScrollingFrame"] = function(Label)
-				Label.ScrollBarImageColor3 = Theme.Component
+				Label.ScrollBarImageColor3 = Theme.Shadow  -- Red scroll bar
 			end,
 		},
 	}
@@ -1037,7 +1027,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				BlurEnabled = true
 
 				if not AlreadyBlurred or not Root then
-					Blurs[Settings.Title] = Blur.new(Window, 5)
+					Blurs[Settings.Title] = Blur.new(Window, 10)  -- Hellish blur intensity
 				elseif Root and not Root.Parent then
 					Root.Parent = workspace.CurrentCamera
 				end
